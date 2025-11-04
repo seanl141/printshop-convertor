@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+jinja2
+docx2pdf
+pillow
+pillow-heif
+PyPDF2
+python-multipart

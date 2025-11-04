@@ -1,0 +1,26 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 600px;
+    margin: 2em auto;
+    text-align: center;
+    background: #f7f7f7;
+    border-radius: 10px;
+    padding: 20px;
+}
+form {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+button:hover { background: #0056b3; }
+.note { font-size: 0.9em; color: #555; margin-top: 20px; }
