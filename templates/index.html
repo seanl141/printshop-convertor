@@ -1,39 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>PrintShop Converter</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
-    <h1>File Converter</h1>
 
-    <form action="/convert_docx" method="post" enctype="multipart/form-data">
-        <h3>Convert .DOCX → PDF</h3>
-        <input type="file" name="file" accept=".doc,.docx" required>
-        <button type="submit">Convert</button>
-    </form>
+    <!-- Header Banner -->
+    <header class="banner">
+        <div class="banner-content">
+            <img src="/static/convertologo.png" alt="PrintShop Converter Logo" class="logo">
+            <div class="banner-text">
+                <h1>PrintShop Converter</h1>
+                <p>Simple file tools for everyday print jobs</p>
+            </div>
+        </div>
+    </header>
 
-    <form action="/convert_heic" method="post" enctype="multipart/form-data">
-        <h3>Convert .HEIC → JPG</h3>
-        <input type="file" name="file" accept=".heic" required>
-        <button type="submit">Convert</button>
-    </form>
+    <!-- Main Content -->
+    <main>
+        <div class="dropzone" data-endpoint="/convert_docx" data-accept=".doc,.docx">
+            <h3>📄 DOCX → PDF</h3>
+            <p>Drag & drop or click to upload</p>
+            <input type="file" hidden>
+        </div>
 
-    <form action="/merge_pdfs" method="post" enctype="multipart/form-data">
-        <h3>Merge PDFs</h3>
-        <input type="file" name="files" accept=".pdf" multiple required>
-        <button type="submit">Merge</button>
-    </form>
+        <div class="dropzone" data-endpoint="/convert_heic" data-accept=".heic">
+            <h3>🖼️ HEIC → JPG</h3>
+            <p>Drag & drop or click to upload</p>
+            <input type="file" hidden>
+        </div>
 
-    <form action="/split_pdf" method="post" enctype="multipart/form-data">
-     <h3>Split PDF into Pages</h3>
-     <input type="file" name="file" accept=".pdf" required><br><br>
-     <label for="pages">Pages (e.g. 1-3,5,8):</label><br>
-     <input type="text" name="pages" placeholder="Leave blank for all pages"><br><br>
-     <button type="submit">Split</button>
-    </form>
+        <div class="dropzone" data-endpoint="/merge_pdfs" data-accept=".pdf" data-multiple="true">
+            <h3>📎 Merge PDFs</h3>
+            <p>Drag & drop multiple PDFs</p>
+            <input type="file" hidden multiple>
+        </div>
 
-    <p class="note">Files are processed locally — nothing is uploaded online.</p>
+        <div class="dropzone" data-endpoint="/split_pdf" data-accept=".pdf">
+            <h3>✂️ Split PDF</h3>
+            <p>Drag & drop a PDF</p>
+            <input type="file" hidden>
+            <div class="page-range" onclick="event.stopPropagation()">
+                <label for="pages">Pages (e.g. 1-3,5,8):</label><br>
+                <input type="text" id="pages" name="pages" placeholder="Leave blank for all pages">
+            </div>
+        </div>
+
+        <div class="dropzone" data-endpoint="/pdf_to_word" data-accept=".pdf">
+            <h3>📝 PDF → Word (Beta)</h3>
+            <p>Drag & drop a PDF to convert into an editable Word document</p>
+            <input type="file" hidden>
+        </div>
+
+        <div class="layout-container" id="layout-form">
+            <h3>📇 Business Cards / Leaflets Layout (Beta)</h3>
+            <form id="layoutUpload" method="post" enctype="multipart/form-data" action="/layout_cards">
+                <label>Front design:</label><br>
+                <input type="file" name="front" accept=".pdf,.jpg,.png" required><br><br>
+                <label>Back design:</label><br>
+                <input type="file" name="back" accept=".pdf,.jpg,.png" required><br><br>
+                <label>Product type:</label><br>
+                <select name="product">
+                    <option value="business_card">Business Card (85×55 mm)</option>
+                    <option value="a5_leaflet">A5 Leaflet</option>
+                </select><br><br>
+                <button type="submit">Generate Duplex Layout</button>
+            </form>
+        </div>
+
+
+
+        <p class="note">All files are processed locally — nothing is uploaded online.</p>
+    </main>
+
+
+
+
+    <script>
+        document.querySelectorAll('.dropzone').forEach(zone => {
+            const input = zone.querySelector('input');
+            const endpoint = zone.dataset.endpoint;
+            const allowMultiple = zone.dataset.multiple === 'true';
+
+            zone.addEventListener('click', () => input.click());
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+            input.addEventListener('change', () => handleFiles(input.files));
+
+            async function handleFiles(files) {
+                const formData = new FormData();
+                if (allowMultiple) {
+                    for (const f of files) formData.append('files', f);
+                } else {
+                    formData.append('file', files[0]);
+                }
+                // Include page selection if present
+                const pageInput = zone.querySelector('#pages');
+                if (pageInput && pageInput.value.trim()) {
+                    formData.append('pages', pageInput.value.trim());
+                }
+
+                zone.classList.add('uploading');
+                try {
+                    const res = await fetch(endpoint, { method: 'POST', body: formData });
+                    const blob = await res.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    const contentDisp = res.headers.get('content-disposition');
+                    const filename = contentDisp?.split('filename=')[1]?.replaceAll('"', '') || 'converted_file';
+                    a.download = filename;
+                    a.click();
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                } finally {
+                    zone.classList.remove('uploading');
+                }
+            }
+        });
+
+
+        // Handle the duplex layout upload form
+        const layoutForm = document.getElementById("layoutUpload");
+        if (layoutForm) {
+            layoutForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const formData = new FormData(layoutForm);
+                try {
+                    // optional: show simple "processing..." state
+                    layoutForm.querySelector("button").textContent = "Processing...";
+                    const res = await fetch("/layout_cards", { method: "POST", body: formData });
+                    if (!res.ok) throw new Error(await res.text());
+                    const blob = await res.blob();
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    const disp = res.headers.get("content-disposition");
+                    const filename = disp?.split("filename=")[1]?.replaceAll('"', '') || "layout.pdf";
+                    a.download = filename;
+                    a.click();
+                } catch (err) {
+                    alert("Error generating layout: " + err.message);
+                } finally {
+                    layoutForm.querySelector("button").textContent = "Generate Duplex Layout";
+                }
+            });
+        }
+    </script>
+
 </body>
+
 </html>
