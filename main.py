@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
+from fastapi import Form 
 from pathlib import Path
 from docx2pdf import convert
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
@@ -64,18 +65,38 @@ async def merge_pdfs(files: list[UploadFile] = File(...)):
     return FileResponse(output, filename="merged.pdf")
 
 @app.post("/split_pdf")
-async def split_pdf(file: UploadFile = File(...)):
+async def split_pdf(file: UploadFile = File(...), pages: str = Form("")):
     input_path = Path("temp_" + file.filename)
     with open(input_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
+
     reader = PdfReader(input_path)
-    split_files = []
-    for i, page in enumerate(reader.pages):
-        writer = PdfWriter()
-        writer.add_page(page)
-        output_path = converted_dir / f"{input_path.stem}_page{i+1}.pdf"
-        with open(output_path, "wb") as out:
-            writer.write(out)
-        split_files.append(output_path)
+    total_pages = len(reader.pages)
+
+    # --- Parse page input ---
+    selected_pages = set()
+    if pages.strip():
+        parts = pages.split(",")
+        for part in parts:
+            if "-" in part:
+                start, end = part.split("-")
+                selected_pages.update(range(int(start), int(end) + 1))
+            else:
+                selected_pages.add(int(part))
+    else:
+        selected_pages = set(range(1, total_pages + 1))
+
+    # --- Create new PDF with selected pages ---
+    writer = PdfWriter()
+    for page_num in sorted(selected_pages):
+        if 1 <= page_num <= total_pages:
+            writer.add_page(reader.pages[page_num - 1])
+        else:
+            print(f"⚠️ Skipping invalid page: {page_num}")
+
+    output_path = converted_dir / f"{input_path.stem}_selected.pdf"
+    with open(output_path, "wb") as out:
+        writer.write(out)
+
     input_path.unlink(missing_ok=True)
-    return FileResponse(split_files[0], filename=split_files[0].name)
+    return FileResponse(output_path, filename=output_path.name)

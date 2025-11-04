@@ -27,9 +27,11 @@
     </form>
 
     <form action="/split_pdf" method="post" enctype="multipart/form-data">
-        <h3>Split PDF into Pages</h3>
-        <input type="file" name="file" accept=".pdf" required>
-        <button type="submit">Split</button>
+     <h3>Split PDF into Pages</h3>
+     <input type="file" name="file" accept=".pdf" required><br><br>
+     <label for="pages">Pages (e.g. 1-3,5,8):</label><br>
+     <input type="text" name="pages" placeholder="Leave blank for all pages"><br><br>
+     <button type="submit">Split</button>
     </form>
 
     <p class="note">Files are processed locally — nothing is uploaded online.</p>
